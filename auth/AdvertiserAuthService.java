@@ -31,13 +31,19 @@ public class AdvertiserAuthService implements IAuthService {
     
     @Override
     public boolean signup(String username, String email, String password) throws SQLException {
-        String sql = "INSERT INTO advertisers (name, email, password, total_budget, remaining_budget) VALUES (?, ?, SHA2(?, 256), 0, 0)";
+        return signup(username, email, password, 0.0);
+    }
+    
+    public boolean signup(String username, String email, String password, double initialBudget) throws SQLException {
+        String sql = "INSERT INTO advertisers (name, email, password, total_budget, remaining_budget) VALUES (?, ?, SHA2(?, 256), ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
             stmt.setString(1, username);
             stmt.setString(2, email);
             stmt.setString(3, password);
+            stmt.setDouble(4, initialBudget);
+            stmt.setDouble(5, initialBudget);
             
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {

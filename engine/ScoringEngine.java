@@ -1,14 +1,13 @@
 package engine;
 
+import dsa.slidingwindow.MemoryWindow;
 import model.Ad;
 import model.AdSlot;
-import dsa.slidingwindow.MemoryWindow;
-import java.util.Map;
 
 public class ScoringEngine {
     private MemoryWindow memoryWindow;
     private static final double BASE_SCORE = 1.0;
-    private static final double MIN_SCORE = 0.01;
+    private static final double MIN_SCORE = 0.001;  // Lower minimum to not filter out ads
     
     public ScoringEngine(MemoryWindow memoryWindow) {
         this.memoryWindow = memoryWindow;
@@ -22,21 +21,32 @@ public class ScoringEngine {
             return MIN_SCORE;
         }
         
-        // Check if advertiser has budget
+        // Check if ad has positive bid
         if (ad.getBidAmount() <= 0) {
             return MIN_SCORE;
         }
         
-        // Core scoring formula: Score = bid × CTR × slotWeight × contextMatch × memoryBoost × fatigueControl
-        double bid = ad.getBidAmount();
-        double ctr = calculateEffectiveCTR(ad);
-        double slotWeight = slot.getWeight();
-        double memoryBoost = memoryWindow.getMemoryBoost(ad.getId(), 60); // Last hour
-        double fatigueControl = memoryWindow.getFatigueScore(ad.getId(), 30); // Last 30 minutes
+        // Ensure minimum context match score
+        if (contextMatch < 0.1) {
+            contextMatch = 0.1;
+        }
         
-        double score = bid * ctr * slotWeight * contextMatch * memoryBoost * fatigueControl;
+        // IMPROVED SCORING FORMULA - Optimized for relevance + bid
+        // Key insight: relevance (context match) should dominate the score
+        // Score = contextMatch × bid × slotWeight × ctr × memoryBoost × fatigueControl
         
-        return Math.max(MIN_SCORE, score);
+        double contextBoost = contextMatch;  // 0.3 to 3.0 from ContextMatcher
+        double bid = Math.max(1.0, ad.getBidAmount() / 10.0);  // Normalize bid to 0.1-5.0 range
+        double ctr = calculateEffectiveCTR(ad);  // 0.01 to 0.5+
+        double slotWeight = slot.getWeight();  // 0.7 to 1.5
+        double memoryBoost = Math.max(0.8, memoryWindow.getMemoryBoost(ad.getId(), 60));  // Min 0.8x
+        double fatigueControl = Math.max(0.5, memoryWindow.getFatigueScore(ad.getId(), 30));  // Min 0.5
+        
+        // Priority: context > bid > ctr > slot > memory > fatigue
+        double score = contextBoost * bid * ctr * slotWeight * memoryBoost * fatigueControl;
+        
+        // Minimum base score for any valid ad
+        return Math.max(0.01, score);  // Ensure all valid ads have at least 0.01
     }
     
     private double calculateEffectiveCTR(Ad ad) {

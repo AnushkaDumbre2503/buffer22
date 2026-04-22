@@ -1,7 +1,6 @@
 package cli;
 
 import auth.AuthContext;
-import auth.RoleType;
 import java.util.Scanner;
 
 public class RoleBasedCLI {
@@ -141,7 +140,7 @@ public class RoleBasedCLI {
         double budget = Double.parseDouble(scanner.nextLine().trim());
         
         auth.AdvertiserAuthService advertiserAuth = new auth.AdvertiserAuthService();
-        if (advertiserAuth.signup(name, email, password)) {
+        if (advertiserAuth.signup(name, email, password, budget)) {
             System.out.println("Signup successful. You can now login.");
         } else {
             System.out.println("Signup failed. Company name or email may already exist.");
